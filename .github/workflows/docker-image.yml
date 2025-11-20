@@ -1,0 +1,29 @@
+name: Build and Download for NAS
+
+# 改成手动触发，不用每次改代码都跑
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. 拉取代码
+    - uses: actions/checkout@v4
+
+    # 2. 构建镜像 (已修正路径为 docker/Dockerfile)
+    - name: Build the Docker image
+      run: docker build . --file docker/Dockerfile --tag tg-signer:latest
+
+    # 3. 把镜像打包成文件 (这是默认模板缺少的)
+    - name: Save Docker Image
+      run: docker save -o tg-signer.tar tg-signer:latest
+
+    # 4. 上传文件让你下载 (这是默认模板缺少的)
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: tg-signer-image
+        path: tg-signer.tar
+        retention-days: 1
