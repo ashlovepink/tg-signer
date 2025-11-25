@@ -1,0 +1,41 @@
+name: Build and Release Docker Image
+
+# 手动触发
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write  # 必须开启这个权限才能创建 Release
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 拉取代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. 生成版本号 (用当前时间，例如 v20231025-1030)
+      - name: Generate Tag Name
+        id: tag
+        run: echo "TAG_NAME=v$(date +'%Y%m%d-%H%M')" >> $GITHUB_OUTPUT
+
+      # 3. 构建 Docker 镜像 (带上修正后的路径)
+      - name: Build Docker Image
+        run: docker build . --file docker/Dockerfile --tag tg-signer:latest
+
+      # 4. 导出镜像文件
+      - name: Save Docker Image
+        run: docker save -o tg-signer.tar tg-signer:latest
+
+      # 5. 创建 Release 并上传文件
+      - name: Create Release and Upload
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+          name: Auto Release ${{ steps.tag.outputs.TAG_NAME }}
+          body: "这是由 GitHub Actions 自动构建的 tg-signer Docker 镜像。"
+          files: tg-signer.tar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
